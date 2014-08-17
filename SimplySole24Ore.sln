@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RSSReader", "RSSReader\RSSReader.csproj", "{210DC839-F558-4098-8F9D-8D2D1A9BE977}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup1", "Setup1\Setup1.vdproj", "{964E642F-0545-4703-B240-49FF5E93DC86}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "RSSReader_Setup", "Setup1\Setup1.vdproj", "{964E642F-0545-4703-B240-49FF5E93DC86}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

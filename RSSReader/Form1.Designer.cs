@@ -63,7 +63,7 @@
             this.Controls.Add(this.listfeed);
             this.Controls.Add(this.axWindowsMediaPlayer1);
             this.Name = "Form1";
-            this.Text = "RSSReader - CodeSnippet + Davidevb6";
+            this.Text = "SimplySole24Ore - Davidevb6";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.axWindowsMediaPlayer1)).EndInit();

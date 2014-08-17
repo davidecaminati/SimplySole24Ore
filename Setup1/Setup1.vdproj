@@ -68,6 +68,19 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.0,Profile=Client"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4 Client Profile (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.0,Profile=Client"
+                    }
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:Microsoft.Windows.Installer.3.1"
+                    {
+                    "Name" = "8:Windows Installer 3.1"
+                    "ProductCode" = "8:Microsoft.Windows.Installer.3.1"
+                    }
+                }
             }
         }
         "Release"
@@ -250,7 +263,7 @@
         "Product"
         {
         "Name" = "8:Microsoft Visual Studio"
-        "ProductName" = "8:RSSReader"
+        "ProductName" = "8:SimplySole24Ore"
         "ProductCode" = "8:{6DA9A527-57DB-4760-8D49-17B7B3249242}"
         "PackageCode" = "8:{9B998AD5-E646-4125-80C0-0D9CD81980E4}"
         "UpgradeCode" = "8:{CE9B4210-1965-490D-B2DC-D87F08BB56B6}"
@@ -263,7 +276,7 @@
         "Manufacturer" = "8:Macasoft"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
-        "Title" = "8:RSSReader"
+        "Title" = "8:SimplySole24Ore"
         "Subject" = "8:"
         "ARPCONTACT" = "8:Davide C."
         "Keywords" = "8:"
