@@ -32,3 +32,8 @@ G:\Condivisa\Tommasini\Software\sorgenti\RSSReader\obj\Release\RSSReader.csprojR
 G:\Condivisa\Tommasini\Software\sorgenti\RSSReader\obj\Release\RSSReader.Form1.resources
 G:\Condivisa\Tommasini\Software\sorgenti\RSSReader\obj\Release\RSSReader.Properties.Resources.resources
 G:\Condivisa\Tommasini\Software\sorgenti\RSSReader\obj\Release\RSSReader.csproj.GenerateResource.Cache
+C:\Users\davide\Documents\GitHub\SimplySole24Ore\RSSReader\obj\Release\Interop.WMPLib.dll
+C:\Users\davide\Documents\GitHub\SimplySole24Ore\RSSReader\obj\Release\AxInterop.WMPLib.dll
+C:\Users\davide\Documents\GitHub\SimplySole24Ore\RSSReader\obj\Release\RSSReader.csproj.ResolveComReference.cache
+C:\Users\davide\Documents\GitHub\SimplySole24Ore\RSSReader\obj\Release\RSSReader.exe
+C:\Users\davide\Documents\GitHub\SimplySole24Ore\RSSReader\obj\Release\RSSReader.pdb
