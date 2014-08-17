@@ -8,10 +8,25 @@
 
 
 // TODO 
-// creare un file di configurazione per impostare la porta seriale appropriata
-// creare un file di configurazione per impostare la scala di sensibilità slide appropriata
-// creare un file di configurazione per impostare l'elenco degli url (RSS feed) da aprire
 // cleanup del codice
+
+
+/* Example of c:\configfile.txt  the configuration file
+@http://feeds.ilsole24ore.com/c/32276/f/438662/index.rss
+@http://feeds.ilsole24ore.com/c/32276/f/566660/index.rss
+|COM9
+ */ 
+
+// COMANDI
+// ESC per uscire
+// INVIO per leggere articolo
+// slide per cambiare articolo
+// button1 per stop
+// button2 per pause
+// button3 per play
+
+// NOTE
+// address.Text = "http://webvoice.tingwo.co/ilsole5642813vox?url=";
 
 
 using System;
@@ -31,27 +46,21 @@ using System.Net;
 using System.IO.Ports;
 using System.Diagnostics;
 
-
-
 namespace RSSReader
 {
     public partial class Form1 : Form
     {
-
         string LastUrl = "";
         WebBrowser feedview = new WebBrowser();
-        string address;
-        string tipoRSS;
         bool onPause = false;
         int actualindex = 0;
         int buttonState1 = 1;
         int buttonState2 = 1;
         int buttonState3 = 1;
-
+        string ComPortName = "";
 
         WMPLib.WindowsMediaPlayer Player;
-        // TODO creare un file di configurazione per impostare la porta seriale appropriata
-        SerialPort mySerialPort = new SerialPort("COM9");
+        SerialPort mySerialPort ;
 
         // Initialize a new instance of the SpeechSynthesizer.
         SpeechSynthesizer synth = new SpeechSynthesizer();
@@ -59,13 +68,16 @@ namespace RSSReader
         public Form1()
         {
             InitializeComponent();
+            ParlaBloccante("caricamento lista articoli, attendere");
             feedview.DocumentCompleted += feedview_DocumentCompleted;
             // Configure the audio output. 
             synth.SetOutputToDefaultAudioDevice();
+            ReadConfigFile();
+            mySerialPort = new SerialPort(ComPortName);
         }
 
 
-        private void Read_RSS(string indirizzo,string tipo)
+        private void Read_RSS(string indirizzo)
         {
             //listfeed.Items.Clear(); 
             try
@@ -79,19 +91,17 @@ namespace RSSReader
                 }
                 if (listfeed.Items.Count == 0)
                 {
-                    Parla("errore nel caricamento degli articoli del sole 24 ore");
+                    ParlaBloccante("errore nel caricamento degli articoli del sole 24 ore");
                 }
                 else
                 {
-                    Parla("Lista articoli " + tipo + " caricata");
+                    //Parla("Lista articoli " + tipo + " caricata");
                 }
-
             }
             catch (Exception q) 
             {
-                MessageBox.Show("Errore nella lettura del feed!Info: \n" + q.Message, "Errore");
+                ParlaBloccante("Errore nella lettura del feed. messaggio:" + q.Message);
             }
-
         }
 
 
@@ -108,7 +118,14 @@ namespace RSSReader
             synth.SpeakAsyncCancelAll();
             //synth.Speak(args);
             synth.SpeakAsync(args);
+        }
 
+
+        private void ParlaBloccante(string args)
+        {
+            Muto();
+            synth.SpeakAsyncCancelAll();
+            synth.Speak(args);
         }
 
 
@@ -131,7 +148,6 @@ namespace RSSReader
             {
                 terminatoreFrase = "";
             }
-
             return terminatoreFrase;
         }
 
@@ -165,29 +181,6 @@ namespace RSSReader
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            Parla("caricamento lista articoli, attendere");
-
-            //address.Text = "http://webvoice.tingwo.co/ilsole5642813vox?url=";
-
-
-            //caricamento indirizzo rss
-            //Prima pagina 
-            tipoRSS = "Prima pagina";
-            address = "http://feeds.ilsole24ore.com/c/32276/f/438662/index.rss";
-            Read_RSS(address, tipoRSS);
-
-            //Notizie 
-            /*
-            tipoRSS = "Notizie";
-            address = "http://feeds.ilsole24ore.com/c/32276/f/566660/index.rss";
-            Read_RSS(address, tipoRSS);
-            */
-
-            /*Notizie 
-            tipoRSS = "Giornale Radio";
-            address = "http://www.ilsole24ore.com/rss/Radio24_gr24.xml";
-            Read_RSS(address, tipoRSS);
-            */
             feedview.ScriptErrorsSuppressed = true;
 
             if (listfeed.Items.Count > 0)
@@ -199,7 +192,36 @@ namespace RSSReader
             }
             else
             {
-                Parla("Errore durante caricamento lista articoli. programma bloccato, si consiglia di chiudere il programma");
+                ParlaBloccante("Errore durante caricamento lista articoli. programma bloccato, si consiglia di chiudere il programma");
+            }
+        }
+
+        
+        private void ReadConfigFile()
+        {
+            try
+            {
+                string line;
+
+                // Read the file and display it line by line.
+                System.IO.StreamReader file = new System.IO.StreamReader(@"c:\configfile.txt");
+                while ((line = file.ReadLine()) != null)
+                {
+                    if (line.StartsWith("@"))
+                    {
+                        Read_RSS(line.Split('@')[1]);
+                    }
+                    if (line.StartsWith("|"))
+                    {
+                        ComPortName = line.Split('|')[1];
+                    }
+                }
+
+                file.Close();
+            }
+            catch (Exception ex)
+            {
+                ParlaBloccante("il file di configurazione non puo' essere aperto causa: " + ex.Message);
             }
         }
 
@@ -243,11 +265,13 @@ namespace RSSReader
             }
         }
 
+
         private void SelezionaFeed(int indice)
         {
             //listfeed.Items[indice].Selected = true;
             actualindex = indice;
         }
+
 
         private void feedview_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
         {
@@ -293,6 +317,7 @@ namespace RSSReader
                 }
             }
 
+
         private void PlayFile(String url)
         {
             Player = new WMPLib.WindowsMediaPlayer();
@@ -303,6 +328,8 @@ namespace RSSReader
             Player.URL = url;
             Player.controls.play();
         }
+
+
         private void StopFile()
         {
             try
@@ -315,6 +342,7 @@ namespace RSSReader
             { }
         }
 
+
         private void Player_PlayStateChange(int NewState)
         {
             if ((WMPLib.WMPPlayState)NewState == WMPLib.WMPPlayState.wmppsStopped)
@@ -325,10 +353,13 @@ namespace RSSReader
             }
         }
 
+
         private void Player_MediaError(object pMediaObject)
         {
-            Parla("errore nel caricamento del file");
+            ParlaBloccante("errore nel caricamento del file");
         }
+
+
         public class RegexLib
         {
             public static string FindMp3Path(string input)
@@ -347,7 +378,6 @@ namespace RSSReader
                 return risultato;
             }
         }
-
 
 
         private void PauseResumeFile()
