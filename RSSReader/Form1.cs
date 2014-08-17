@@ -1,7 +1,18 @@
 ﻿/* Programma scritto da Davide Caminati il 3/8/2014
  * davide.caminati@gmail.com
  * http://caminatidavide.it/
+ * 
+ * licenza copyleft 
+ * http://it.wikipedia.org/wiki/Copyleft#Come_si_applica_il_copyleft
  */
+
+
+// TODO 
+// creare un file di configurazione per impostare la porta seriale appropriata
+// creare un file di configurazione per impostare la scala di sensibilità slide appropriata
+// creare un file di configurazione per impostare l'elenco degli url (RSS feed) da aprire
+// cleanup del codice
+
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +28,10 @@ using System.Speech.Synthesis;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Net;
+using System.IO.Ports;
+using System.Diagnostics;
+
+
 
 namespace RSSReader
 {
@@ -28,9 +43,15 @@ namespace RSSReader
         string address;
         string tipoRSS;
         bool onPause = false;
+        int actualindex = 0;
+        int buttonState1 = 1;
+        int buttonState2 = 1;
+        int buttonState3 = 1;
+
 
         WMPLib.WindowsMediaPlayer Player;
-
+        // TODO creare un file di configurazione per impostare la porta seriale appropriata
+        SerialPort mySerialPort = new SerialPort("COM9");
 
         // Initialize a new instance of the SpeechSynthesizer.
         SpeechSynthesizer synth = new SpeechSynthesizer();
@@ -42,6 +63,7 @@ namespace RSSReader
             // Configure the audio output. 
             synth.SetOutputToDefaultAudioDevice();
         }
+
 
         private void Read_RSS(string indirizzo,string tipo)
         {
@@ -79,6 +101,7 @@ namespace RSSReader
             synth.SpeakAsyncCancelAll();
         }
 
+
         private void Parla(string args)
         {
             Muto();
@@ -87,6 +110,7 @@ namespace RSSReader
             synth.SpeakAsync(args);
 
         }
+
 
         private string isBorderElement(ListViewItem elemento)
         {
@@ -138,6 +162,7 @@ namespace RSSReader
             }
         }
 
+
         private void Form1_Load(object sender, EventArgs e)
         {
             Parla("caricamento lista articoli, attendere");
@@ -169,7 +194,59 @@ namespace RSSReader
             {
                 listfeed.Items[0].Selected = true;
                 listfeed.Select();
+                // Open the serial port
+                OpenSerialPort();
             }
+            else
+            {
+                Parla("Errore durante caricamento lista articoli. programma bloccato, si consiglia di chiudere il programma");
+            }
+        }
+
+
+        private void OpenSerialPort()
+        {
+            try
+            {
+                mySerialPort.BaudRate = 9600;
+                mySerialPort.Parity = Parity.None;
+                mySerialPort.StopBits = StopBits.One;
+                mySerialPort.DataBits = 8;
+                mySerialPort.Handshake = Handshake.None;
+                mySerialPort.DataReceived += SerialPortDataReceived;
+                mySerialPort.Open();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message + ex.StackTrace);
+            }
+        }
+
+
+        private void SerialPortDataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            SerialPort sp = (SerialPort)sender;
+            string  buff = sp.ReadLine();
+            if (!String.IsNullOrEmpty(buff))
+            {
+                char[] delimiterChars = { ' ' };
+                string[] words = buff.Split(delimiterChars);
+                if (words.Count() == 4)
+                {
+                    int a = Convert.ToInt32(words[0].ToString());
+                    SelezionaFeed(a);
+                    buttonState1 = Convert.ToInt32(words[1].ToString());
+                    buttonState2 = Convert.ToInt32(words[2].ToString());
+                    buttonState3 = Convert.ToInt32(words[3].ToString());
+
+                }
+            }
+        }
+
+        private void SelezionaFeed(int indice)
+        {
+            //listfeed.Items[indice].Selected = true;
+            actualindex = indice;
         }
 
         private void feedview_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
@@ -267,7 +344,6 @@ namespace RSSReader
                     risultato = matches[0].ToString();
                     risultato = risultato.Replace ("\"","");
                 }
-                
                 return risultato;
             }
         }
@@ -293,6 +369,7 @@ namespace RSSReader
             catch
             { }
         }
+
 
         private void listfeed_KeyUp(object sender, KeyEventArgs e)
         {
@@ -327,6 +404,49 @@ namespace RSSReader
                     PauseResumeFile();
                     break;
             }
+        }
+
+
+        // FAST (but not so elegant) solution for cross threading in serial data input
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            int selectedIndex = listfeed.SelectedIndices[0];
+            if (actualindex != selectedIndex)
+            {
+                listfeed.SelectedItems.Clear();
+                listfeed.Items[actualindex].Selected = true;
+                listfeed.Items[actualindex].Focused = true;
+                listfeed.Select();
+            }
+
+
+            if (buttonState3 == 0)
+            {
+                // eseguo la lettura dell'articolo
+                if ((listfeed.Items.Count > 0) && (listfeed.SelectedItems.Count > 0))
+                {
+                    feedview.Navigate(listfeed.SelectedItems[0].SubItems[1].Text);
+                }
+                //resetto la variabile
+                buttonState3 = 1;
+            }
+
+            if (buttonState2 == 0)
+            {
+                // metto in pausa la lettura dell'articolo
+                PauseResumeFile();
+                //resetto la variabile
+                buttonState2 = 1;
+            }
+
+            if (buttonState1 == 0)
+            {
+                // interrompo la lettura dell'articolo
+                StopFile();
+                //resetto la variabile
+                buttonState1 = 1;
+            }
+
         }
     }
 }
