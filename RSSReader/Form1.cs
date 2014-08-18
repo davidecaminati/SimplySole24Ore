@@ -6,10 +6,9 @@
  * http://it.wikipedia.org/wiki/Copyleft#Come_si_applica_il_copyleft
  */
 
-
 // TODO 
+// fare a meno della listview
 // cleanup del codice
-
 
 /* Example of c:\configfile.txt  the configuration file
 @http://feeds.ilsole24ore.com/c/32276/f/438662/index.rss
@@ -21,7 +20,7 @@
 // ESC per uscire
 // INVIO per leggere articolo
 // slide per cambiare articolo
-// button1 per stop
+// button1 per cambio pagine
 // button2 per pause
 // button3 per play
 
@@ -50,150 +49,144 @@ namespace RSSReader
 {
     public partial class Form1 : Form
     {
-        string LastUrl = "";
-        WebBrowser feedview = new WebBrowser();
-        bool onPause = false;
-        int actualindex = 0;
+        // VARIABLES
+        bool onPause = false; // variable for trace WindowsMediaPlayer state
         int buttonState1 = 1;
         int buttonState2 = 1;
         int buttonState3 = 1;
-        string ComPortName = "";
+        string portName = "";
+        List<ListViewItem> newsPage = new List<ListViewItem>();
+        List<string> listUrl = new List<string>();
 
+        string mp3PathFile = @"c:\myfile.mp3";
+        string lastUrl = "";
+        int actualIndex = 0;
+        int slideStart = 0;
+        int lastSlideValue = 0;
+
+        bool TitoloDaLeggere = false;
+        int numElementInPage = 7; // Depends on Arduino Slide Settings
+
+        // OBJECTS
+        WebBrowser Wb = new WebBrowser();
         WMPLib.WindowsMediaPlayer Player;
-        SerialPort mySerialPort ;
-
-        // Initialize a new instance of the SpeechSynthesizer.
-        SpeechSynthesizer synth = new SpeechSynthesizer();
+        SerialPort Sp ;
+        SpeechSynthesizer Synth = new SpeechSynthesizer();
 
         public Form1()
         {
             InitializeComponent();
-            ParlaBloccante("caricamento lista articoli, attendere");
-            feedview.DocumentCompleted += feedview_DocumentCompleted;
-            // Configure the audio output. 
-            synth.SetOutputToDefaultAudioDevice();
-            ReadConfigFile();
-            mySerialPort = new SerialPort(ComPortName);
+            //ParlaBloccante("caricamento lista articoli, attendere");
+            Wb.DocumentCompleted += Wb_DocumentCompleted;
+
+            Synth.SetOutputToDefaultAudioDevice();  // Configure the audio output for speech synth. 
+
+            ReadConfigFile();                       // read config (urls, serial port)
+            popolalistNewsComplete();               // create news from RSS Feeds into listNewsComplete
+
+            Sp = new SerialPort(portName);
+            LeggiTitoloNews();
         }
 
-
-        private void Read_RSS(string indirizzo)
+        /// <summary>
+        /// lettura titolo delle news (viene lanciato automaticamente quando si seleziona una news)
+        /// </summary>
+        private void LeggiTitoloNews()
         {
-            //listfeed.Items.Clear(); 
+            //stop eventualy other file
+            StopFile();
             try
             {
-                XmlReader reader = XmlReader.Create(indirizzo);
-                SyndicationFeed feed = SyndicationFeed.Load(reader);
-                foreach (SyndicationItem s in feed.Items)
+                if (Wb.Document != null)
                 {
-                    string[] r = { s.Title.Text, s.Links[0].Uri.ToString() };
-                    listfeed.Items.Add(new ListViewItem(r));
-                }
-                if (listfeed.Items.Count == 0)
-                {
-                    ParlaBloccante("errore nel caricamento degli articoli del sole 24 ore");
+                    Wb.Document.OpenNew(true);
+                    Wb.Document.Write(newsPage[actualIndex].SubItems[1].Text);
                 }
                 else
                 {
-                    //Parla("Lista articoli " + tipo + " caricata");
+                    Wb.DocumentText = newsPage[actualIndex].SubItems[1].Text;
                 }
+                Parla(actualIndex.ToString() + ". " + newsPage[actualIndex].Text); //numero e poi titolo notizia
             }
-            catch (Exception q) 
+            catch 
             {
-                ParlaBloccante("Errore nella lettura del feed. messaggio:" + q.Message);
             }
         }
 
-
-        private void Muto()
+        /// <summary>
+        /// Carica l'elenco delle news dai feed RSS usando l'elenco degli indirizzi caricati durante la lettura del file di configurazione
+        /// </summary>
+        private void popolalistNewsComplete()
         {
-
-            synth.SpeakAsyncCancelAll();
-        }
-
-
-        private void Parla(string args)
-        {
-            Muto();
-            synth.SpeakAsyncCancelAll();
-            //synth.Speak(args);
-            synth.SpeakAsync(args);
-        }
-
-
-        private void ParlaBloccante(string args)
-        {
-            Muto();
-            synth.SpeakAsyncCancelAll();
-            synth.Speak(args);
-        }
-
-
-        private string isBorderElement(ListViewItem elemento)
-        {
-            string terminatoreFrase;
-            var r = Enumerable.Empty<ListViewItem>();
-            r = this.listfeed.Items.OfType<ListViewItem>();
-            var last = r.LastOrDefault();
-            var first = r.FirstOrDefault();
-            if (listfeed.SelectedItems[0] == last)
+            foreach (string u in listUrl) 
             {
-                terminatoreFrase = ". ultimo elemento";
-            }
-            else if (listfeed.SelectedItems[0] == first)
-            {
-                terminatoreFrase = ". primo elemento";
-            }
-            else
-            {
-                terminatoreFrase = "";
-            }
-            return terminatoreFrase;
-        }
-
-
-        private void listfeed_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (listfeed.SelectedItems.Count == 1)
-            {
-                //stop eventualy other file
-                StopFile();
-
-                int selectedIndex = listfeed.SelectedIndices[0];
-                try
-                {
-                    if (feedview.Document != null)
-                    {
-                        feedview.Document.OpenNew(true);
-                        feedview.Document.Write(listfeed.SelectedItems[0].SubItems[1].Text);
-                    }
-                    else
-                    {
-                        feedview.DocumentText = listfeed.SelectedItems[0].SubItems[1].Text;
-                    }
-                    string terminatore = isBorderElement(listfeed.SelectedItems[0]);
-                    Parla(listfeed.SelectedItems[0].Text.ToString() + terminatore);
-                }
-                catch { }
+                Read_RSS(u); 
             }
         }
 
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            feedview.ScriptErrorsSuppressed = true;
-
-            if (listfeed.Items.Count > 0)
+            Wb.ScriptErrorsSuppressed = true;
+            
+            if (newsPage.Count > 0)
             {
-                listfeed.Items[0].Selected = true;
-                listfeed.Select();
-                // Open the serial port
-                OpenSerialPort();
+                OpenSerialPort();   // Open the serial port
             }
             else
             {
                 ParlaBloccante("Errore durante caricamento lista articoli. programma bloccato, si consiglia di chiudere il programma");
             }
+        }
+
+        /// <summary>
+        /// Estrae l'elenco delle news dal singolo feed RSS
+        /// </summary>
+        /// <param name="indirizzo">url completo del feed RSS</param>
+        private void Read_RSS(string indirizzo)
+        {
+            try
+            {
+                XmlReader reader = XmlReader.Create(indirizzo);
+                SyndicationFeed feed = SyndicationFeed.Load(reader);
+                foreach (SyndicationItem s in feed.Items)
+                {
+                    string[] r = {s.Title.Text, s.Links[0].Uri.ToString() };
+                    newsPage.Add(new ListViewItem(r));
+                }
+            }
+            catch (Exception ex) 
+            {
+                ParlaBloccante("Errore nella lettura del feed. messaggio:" + ex.Message);
+            }
+        }
+
+
+        private void Muto()
+        {
+            Synth.SpeakAsyncCancelAll();
+        }
+
+        /// <summary>
+        /// attiva il Synt vocale e riproduce il testo passato come parametro (puo' essere interrotto da un'altra riproduzione)
+        /// </summary>
+        /// <param name="args">testo da pronunciare</param>
+        private void Parla(string args)
+        {
+            Muto();
+            Synth.SpeakAsyncCancelAll();
+            Synth.SpeakAsync(args);
+        }
+
+        /// <summary>
+        /// attiva il Synt vocale e riproduce il testo passato come parametro (NON puo' essere interrotto da un'altra riproduzione)
+        /// </summary>
+        /// <param name="args">testo da pronunciare</param>
+        private void ParlaBloccante(string args)
+        {
+            Muto();
+            Synth.SpeakAsyncCancelAll();
+            Synth.Speak(args);
         }
 
         
@@ -202,21 +195,19 @@ namespace RSSReader
             try
             {
                 string line;
-
-                // Read the file and display it line by line.
+                // Read the configuration file line by line.
                 System.IO.StreamReader file = new System.IO.StreamReader(@"c:\configfile.txt");
                 while ((line = file.ReadLine()) != null)
                 {
                     if (line.StartsWith("@"))
                     {
-                        Read_RSS(line.Split('@')[1]);
+                        listUrl.Add(line.Split('@')[1]);
                     }
                     if (line.StartsWith("|"))
                     {
-                        ComPortName = line.Split('|')[1];
+                        portName = line.Split('|')[1];
                     }
                 }
-
                 file.Close();
             }
             catch (Exception ex)
@@ -226,17 +217,32 @@ namespace RSSReader
         }
 
 
+        private void NextPage()
+        {
+            if (actualIndex < (newsPage.Count - numElementInPage))
+            {
+                actualIndex += numElementInPage;
+                slideStart += numElementInPage;
+            }
+            else
+            {
+                actualIndex = 0;
+                slideStart = 0;
+            }
+        }
+
+
         private void OpenSerialPort()
         {
             try
             {
-                mySerialPort.BaudRate = 9600;
-                mySerialPort.Parity = Parity.None;
-                mySerialPort.StopBits = StopBits.One;
-                mySerialPort.DataBits = 8;
-                mySerialPort.Handshake = Handshake.None;
-                mySerialPort.DataReceived += SerialPortDataReceived;
-                mySerialPort.Open();
+                Sp.BaudRate = 9600;
+                Sp.Parity = Parity.None;
+                Sp.StopBits = StopBits.One;
+                Sp.DataBits = 8;
+                Sp.Handshake = Handshake.None;
+                Sp.DataReceived += SerialPortDataReceived;
+                Sp.Open();
             }
             catch (Exception ex)
             {
@@ -247,75 +253,95 @@ namespace RSSReader
 
         private void SerialPortDataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            SerialPort sp = (SerialPort)sender;
-            string  buff = sp.ReadLine();
-            if (!String.IsNullOrEmpty(buff))
+            try
             {
-                char[] delimiterChars = { ' ' };
-                string[] words = buff.Split(delimiterChars);
-                if (words.Count() == 4)
+                SerialPort sp = (SerialPort)sender;
+                string buff = sp.ReadLine();
+                if (!String.IsNullOrEmpty(buff))
                 {
-                    int a = Convert.ToInt32(words[0].ToString());
-                    SelezionaFeed(a);
-                    buttonState1 = Convert.ToInt32(words[1].ToString());
-                    buttonState2 = Convert.ToInt32(words[2].ToString());
-                    buttonState3 = Convert.ToInt32(words[3].ToString());
-
+                    char[] delimiterChars = { ' ' };
+                    string[] words = buff.Split(delimiterChars);
+                    if (words.Count() == 4)
+                    {
+                        int a = Convert.ToInt32(words[0].ToString());
+                        actualIndex = slideStart + a;
+                        if (lastSlideValue != a)
+                        {
+                            TitoloDaLeggere = true;
+                        }
+                        lastSlideValue = a;
+                        buttonState1 = Convert.ToInt32(words[1].ToString());
+                        buttonState2 = Convert.ToInt32(words[2].ToString());
+                        buttonState3 = Convert.ToInt32(words[3].ToString());
+                    }
                 }
+            }
+            catch
+            { 
             }
         }
 
 
-        private void SelezionaFeed(int indice)
+        private void SelezionaProssimaNews()
         {
-            //listfeed.Items[indice].Selected = true;
-            actualindex = indice;
+            if (actualIndex < newsPage.Count -1)
+            {
+                actualIndex += 1;
+            }
+            else
+            {
+                ParlaBloccante("ultimo elemento");
+            }
         }
 
 
-        private void feedview_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
+        private void SelezionaPrecedenteNews()
         {
-            string indirizzo = feedview.Url.ToString();
+            if (actualIndex > 0)
+            {
+                actualIndex -= 1;
+            }
+            else
+            {
+                ParlaBloccante("primo elemento");
+            }
+        }
+
+
+        private void Wb_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
+        {
+            string indirizzo = Wb.Url.ToString();
             if (indirizzo != "about:blank")
             {
-                if (!LastUrl.StartsWith("http://webvoice.tingwo.co"))
+                if (!lastUrl.StartsWith("http://webvoice.tingwo.co"))
                 {
-                    string testo = feedview.DocumentText;
-                    string percorsomp3 = RegexLib.FindMp3Path(testo);
+                    string testoHTML = Wb.DocumentText;
+                    string percorsoMp3 = RegexLib.FindMp3Path(testoHTML);
                     // download mp3
-                    if  (percorsomp3 == "")
+                    if (percorsoMp3 == "")
                     {
                         if (indirizzo.StartsWith("http://www.ilsole24ore.com"))
                         {
-                            if (LastUrl != feedview.Url.ToString())
+                            if (lastUrl != Wb.Url.ToString())
                             {
-                                LastUrl = feedview.Url.ToString();
-                                Parla("Lettura articolo"); //in realtà verrà letto al prossimo document_complete
-                                feedview.Navigate("http://webvoice.tingwo.co/ilsole5642813vox?url=" + LastUrl);
-
+                                lastUrl = Wb.Url.ToString();
+                                Parla("Lettura articolo");  //in realtà verrà letto al prossimo document_complete
+                                Wb.Navigate("http://webvoice.tingwo.co/ilsole5642813vox?url=" + lastUrl);
                             }
                         }
                     }
-
                     else
-                        {
-                            // blocca caricamento pagina nel browser
-                            feedview.Navigate("about:blank");
-                            //start download
-                            WebClient webClient = new WebClient();
-                            webClient.DownloadFile("http://webvoice.tingwo.co/" + percorsomp3, @"c:\myfile.mp3");
-
-                            //stop eventualy other file
-                            StopFile();
-                            // open mp3file
-                            PlayFile(@"c:\myfile.mp3");
-
-                            //svuota percorsomp3
-                            percorsomp3 = "";
-                        }
+                    {
+                        Wb.Navigate("about:blank");     // blocca caricamento pagina nel browser
+                        WebClient webClient = new WebClient();
+                        webClient.DownloadFile("http://webvoice.tingwo.co/" + percorsoMp3, mp3PathFile);//start download
+                        StopFile();                     //stop eventualy other file
+                        PlayFile(mp3PathFile);     // open mp3file
+                        percorsoMp3 = "";               //svuota percorsomp3
                     }
                 }
             }
+        }
 
 
         private void PlayFile(String url)
@@ -337,6 +363,7 @@ namespace RSSReader
                 Player.controls.stop();
                 Player.close();
                 onPause = false;
+                //File.Delete(mp3PathFile);
             }
             catch
             { }
@@ -348,7 +375,7 @@ namespace RSSReader
             if ((WMPLib.WMPPlayState)NewState == WMPLib.WMPPlayState.wmppsStopped)
             {
                 // to do 
-                //for eache file save the position and ask if continue from this position on load
+                // for eache file save the position and ask if continue from this position on load
                 string posizione = Player.controls.currentPositionString;
             }
         }
@@ -360,33 +387,13 @@ namespace RSSReader
         }
 
 
-        public class RegexLib
-        {
-            public static string FindMp3Path(string input)
-            {
-                string pattern = @"[""].download.+[""]";
-                Regex rgx = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-                // Find matches.
-                MatchCollection matches = rgx.Matches(input);
-                string risultato = "";
-                if (matches.Count == 1)
-                { 
-                    risultato = matches[0].ToString();
-                    risultato = risultato.Replace ("\"","");
-                }
-                return risultato;
-            }
-        }
-
-
         private void PauseResumeFile()
         {
             try
             {
                 if (onPause)
                 {
-                    /* Pause the Player. */
+                    // Pause the Player.
                     Player.controls.play();
                     onPause = false;
                 }
@@ -401,14 +408,20 @@ namespace RSSReader
         }
 
 
-        private void listfeed_KeyUp(object sender, KeyEventArgs e)
+        private void PlayFeed(int index)
+        {
+            Wb.Navigate(newsPage[index].SubItems[1].Text);
+        }
+
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
             {
                 case Keys.Enter:
-                    if ((listfeed.Items.Count > 0) && (listfeed.SelectedItems.Count > 0))
+                    if (newsPage.Count > 0)
                     {
-                        feedview.Navigate(listfeed.SelectedItems[0].SubItems[1].Text);
+                        PlayFeed(actualIndex);
                     }
                     break;
 
@@ -419,15 +432,22 @@ namespace RSSReader
                     Console.Beep();
                     this.Close();
                     break;
-
                 case Keys.Down:
-                    //stop eventualy other file
                     StopFile();
+                    SelezionaProssimaNews();
+                    LeggiTitoloNews();
                     break;
 
                 case Keys.Up:
-                    //stop eventualy other file
-                     StopFile();
+                    StopFile();
+                    SelezionaPrecedenteNews();
+                    LeggiTitoloNews();
+                    break;
+
+                case Keys.Right:
+                    StopFile();
+                    NextPage();
+                    LeggiTitoloNews();
                     break;
 
                 case Keys.Space:
@@ -436,47 +456,45 @@ namespace RSSReader
             }
         }
 
-
         // FAST (but not so elegant) solution for cross threading in serial data input
         private void timer1_Tick(object sender, EventArgs e)
         {
-            int selectedIndex = listfeed.SelectedIndices[0];
-            if (actualindex != selectedIndex)
+            try
             {
-                listfeed.SelectedItems.Clear();
-                listfeed.Items[actualindex].Selected = true;
-                listfeed.Items[actualindex].Focused = true;
-                listfeed.Select();
-            }
-
-
-            if (buttonState3 == 0)
-            {
-                // eseguo la lettura dell'articolo
-                if ((listfeed.Items.Count > 0) && (listfeed.SelectedItems.Count > 0))
+                if (TitoloDaLeggere)
                 {
-                    feedview.Navigate(listfeed.SelectedItems[0].SubItems[1].Text);
+                    LeggiTitoloNews();
+                    TitoloDaLeggere = false;
                 }
-                //resetto la variabile
-                buttonState3 = 1;
-            }
+                if (buttonState3 == 0)
+                {
+                    StopFile();
+                    PlayFeed(actualIndex);  // eseguo la lettura dell'articolo
+                    buttonState3 = 1;       // resetto la variabile
+                }
 
-            if (buttonState2 == 0)
+                if (buttonState2 == 0)
+                {
+                    PauseResumeFile();      // metto in pausa la lettura dell'articolo
+                    buttonState2 = 1;       // resetto la variabile
+                }
+
+                if (buttonState1 == 0)
+                {
+                    StopFile();             // cambio pagina
+                    NextPage();
+                    LeggiTitoloNews();
+                    //resetto la variabile
+                    buttonState1 = 1;
+                }
+
+            }
+            catch
             {
-                // metto in pausa la lettura dell'articolo
-                PauseResumeFile();
-                //resetto la variabile
-                buttonState2 = 1;
-            }
+                // in some case, the refresh could cause a delay and throw in error with index
 
-            if (buttonState1 == 0)
-            {
-                // interrompo la lettura dell'articolo
-                StopFile();
-                //resetto la variabile
-                buttonState1 = 1;
             }
-
         }
+
     }
 }
