@@ -7,7 +7,6 @@
  */
 
 // TODO 
-// fare a meno della listview
 // cleanup del codice
 
 /* Example of c:\configfile.txt  the configuration file
