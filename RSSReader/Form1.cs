@@ -57,7 +57,7 @@ namespace RSSReader
         List<ListViewItem> newsPage = new List<ListViewItem>();
         List<string> listUrl = new List<string>();
 
-        string mp3PathFile = @"c:\myfile.mp3";
+        string mp3PathFile = "";  // downloaded file from web
         string lastUrl = "";
         int actualIndex = 0;
         int slideStart = 0;
@@ -79,8 +79,14 @@ namespace RSSReader
             Wb.DocumentCompleted += Wb_DocumentCompleted;
 
             Synth.SetOutputToDefaultAudioDevice();  // Configure the audio output for speech synth. 
-
-            ReadConfigFile();                       // read config (urls, serial port)
+            
+            // set de working directory
+            string folder = @System.IO.Path.GetDirectoryName(@System.Reflection.Assembly.GetExecutingAssembly().Location);
+            string path_fileconfig = folder + @"\config.txt";
+            mp3PathFile = folder + @"\myfile.mp3"; // downloaded file from web
+            
+            // configure the application
+            ReadConfigFile(path_fileconfig);        // read config (urls, serial port)
             popolalistNewsComplete();               // create news from RSS Feeds into listNewsComplete
 
             Sp = new SerialPort(portName);
@@ -188,14 +194,25 @@ namespace RSSReader
             Synth.Speak(args);
         }
 
-        
-        private void ReadConfigFile()
+
+        private void ReadConfigFile(string configFilePath)
         {
             try
             {
+                //check if config file exist
+                if (!System.IO.File.Exists(configFilePath))
+                {
+                    //create default file config
+                    //first line for RSS, Second for Com port
+                    string[] lines = { @"@http://feeds.ilsole24ore.com/c/32276/f/438662/index.rss", "|COM9" };
+                    // WriteAllLines creates a file, writes a collection of strings to the file,
+                    // and then closes the file.
+                    System.IO.File.WriteAllLines(configFilePath, lines);
+                }
+
                 string line;
                 // Read the configuration file line by line.
-                System.IO.StreamReader file = new System.IO.StreamReader(@"c:\configfile.txt");
+                System.IO.StreamReader file = new System.IO.StreamReader(@configFilePath);
                 while ((line = file.ReadLine()) != null)
                 {
                     if (line.StartsWith("@"))
