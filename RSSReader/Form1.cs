@@ -87,7 +87,7 @@ namespace RSSReader
             
             // configure the application
             ReadConfigFile(path_fileconfig);        // read config (urls, serial port)
-            popolalistNewsComplete();               // create news from RSS Feeds into listNewsComplete
+            PopolalistNewsComplete();               // create news from RSS Feeds into listNewsComplete
 
             Sp = new SerialPort(portName);
             LeggiTitoloNews();
@@ -121,7 +121,7 @@ namespace RSSReader
         /// <summary>
         /// Carica l'elenco delle news dai feed RSS usando l'elenco degli indirizzi caricati durante la lettura del file di configurazione
         /// </summary>
-        private void popolalistNewsComplete()
+        private void PopolalistNewsComplete()
         {
             foreach (string u in listUrl) 
             {
